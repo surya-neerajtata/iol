@@ -1,0 +1,68 @@
+function y = imagepro(img)
+
+%% Initialization
+a = imread(img);
+bP = []; % bP (bright points) is array of coordinates of with brightness more than 60
+fP = []; % fP (far points) is the array with points that are more than 1 point away in x dir
+finX = [];
+finY = [];
+nPx = [];
+nPy = [];
+% lcw = [];
+
+%% For loops
+
+for i = 1:512
+    for j = 1:512
+        if a(i,j) > 60 % brightness more than 60
+            bP = vertcat(bP,[i,j]);
+        end
+    end
+end
+
+for i = 2:size(bP,1)
+    if bP(i,2)-bP(i-1,2) ~= 1 % distance more than 1
+        fP = vertcat(fP,bP(i,:));
+    end
+end
+
+% scw = sortrows(cw,2);
+% for i = 2:size(bw,1)
+%   if scw(i,1)-scw(i-1,2) ~= 1
+%       lcw = vertcat(lcw,bw(i,:)); % cw is the array with points that are more than 1 point away in x dir
+%   end
+% end
+
+nP = [];
+
+nP = rangesearch(bP,fP,10); % indices of near-points (in bw)
+
+finX = [];
+finY = [];
+
+for i = 1:size(nP,1)
+    nParray = nP{i,1};
+    cP = horzcat(bP(nParray,1),bP(nParray,2));
+%     finX = vertcat(finX,sum(bP(nParray,1)*)/sum(a(bP(nParray)))); % x-coordinates of points after averaging the near-points (final x-coordinates)
+    weightedsumx = 0;
+    weightedsumy = 0;
+    sumofweights = 0;
+    inten = [];
+    for j = 1:size(nParray,2)
+        inten = double(a(cP(j,1),cP(j,2)));
+        weightedsumx = weightedsumx + cP(j,1).*inten;
+        weightedsumy = weightedsumy + cP(j,2).*inten;
+        sumofweights = sumofweights + inten;
+    end
+    finX = vertcat(finX,weightedsumx/sumofweights); % x-coordinates of points after averaging the near-points (final y-coordinates)
+    finY = vertcat(finY,weightedsumy/sumofweights); % y-coordinates of points after averaging the near-points (final y-coordinates)
+end
+
+y = horzcat(finX,finY);
+
+%% Display of results
+
+%plot(cent(:,1),cent(:,2),'*')
+
+% After getting the coordinates of the spots, use the x - and y -
+% coordinates to find the all the required values for Zernike
