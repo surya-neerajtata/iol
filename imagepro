@@ -1,24 +1,46 @@
 function y = imagepro(img)
 
+%% Image processing (imagepro)
+% imagepro takes an input image from Shack-Hartmann setup with spots over
+% multiple pixels and finds the centroid of the cluster to give a single
+% pixel value to a single spot. It uses a centroiding scheme using a 
+% weighting mechanism with brightness of the pixel as the weighting factor.
+%
+% Example:
+% 
+% img = 'trial.jpg';
+% imgt = imagepro(img);
+
 %% Initialization
+
+% Read image and strip away red and blue intensities
+%------------------------------------------------------------------
 a = imread(img);
+a = a(:,:,2);
+
 bP = []; % bP (bright points) is array of coordinates of with brightness more than 60
 fP = []; % fP (far points) is the array with points that are more than 1 point away in x dir
 finX = [];
 finY = [];
+nP = [];
 nPx = [];
 nPy = [];
-% lcw = [];
 
 %% For loops
 
-for i = 1:512
-    for j = 1:512
-        if a(i,j) > 60 % brightness more than 60
+% Collect points with brightness more than 40
+%------------------------------------------------------------------
+
+for i = 1:1024
+    for j = 1:1280
+        if a(i,j) > 40
             bP = vertcat(bP,[i,j]);
         end
     end
 end
+
+% Collect points with distance more than 1 in Y-direction
+%------------------------------------------------------------------
 
 for i = 2:size(bP,1)
     if bP(i,2)-bP(i-1,2) ~= 1 % distance more than 1
@@ -26,43 +48,65 @@ for i = 2:size(bP,1)
     end
 end
 
-% scw = sortrows(cw,2);
-% for i = 2:size(bw,1)
-%   if scw(i,1)-scw(i-1,2) ~= 1
-%       lcw = vertcat(lcw,bw(i,:)); % cw is the array with points that are more than 1 point away in x dir
-%   end
-% end
+% Find the indices of points closer than 30 in euclidean metric
+%------------------------------------------------------------------
 
-nP = [];
+nP = rangesearch(bP,fP,30); % indices of near-points (in bw)
 
-nP = rangesearch(bP,fP,10); % indices of near-points (in bw)
-
-finX = [];
-finY = [];
+% Based on the indices above, collect the coordinates of near points.
+% nP is the cell-structure with indices
+% nParray is an array with the indices
+% cP is the array with the coordinates given in the indices
+% inten is the array with the intensities of the close points
+%------------------------------------------------------------------
 
 for i = 1:size(nP,1)
     nParray = nP{i,1};
     cP = horzcat(bP(nParray,1),bP(nParray,2));
-%     finX = vertcat(finX,sum(bP(nParray,1)*)/sum(a(bP(nParray)))); % x-coordinates of points after averaging the near-points (final x-coordinates)
     weightedsumx = 0;
     weightedsumy = 0;
     sumofweights = 0;
     inten = [];
+    
+% Loop over close-points to find the centroid
+%------------------------------------------------------------------
+    
     for j = 1:size(nParray,2)
         inten = double(a(cP(j,1),cP(j,2)));
         weightedsumx = weightedsumx + cP(j,1).*inten;
         weightedsumy = weightedsumy + cP(j,2).*inten;
         sumofweights = sumofweights + inten;
     end
+    
+% Add the centroids of the clusters to final coordinate arrays
+%------------------------------------------------------------------
+
     finX = vertcat(finX,weightedsumx/sumofweights); % x-coordinates of points after averaging the near-points (final y-coordinates)
     finY = vertcat(finY,weightedsumy/sumofweights); % y-coordinates of points after averaging the near-points (final y-coordinates)
 end
 
 y = horzcat(finX,finY);
 
+
 %% Display of results
+% 
+% plot(y(:,1),y(:,2),'*')
 
-%plot(cent(:,1),cent(:,2),'*')
-
-% After getting the coordinates of the spots, use the x - and y -
-% coordinates to find the all the required values for Zernike
+%% Old version details
+%
+% in line 27:
+%
+% and lcw = []; 
+%
+% In lines 50-55, insert:
+%
+% scw = sortrows(cw,2);
+% for i = 2:size(bw,1)
+%   if scw(i,1)-scw(i-1,2) ~= 1
+%       lcw = vertcat(lcw,bw(i,:)); % cw is the array with points that are more than 1 point away in x dir
+%   end
+% end
+% 
+% in line 66:
+% 
+% finX = vertcat(finX,sum(bP(nParray,1)*)/sum(a(bP(nParray)))); % x-coordinates of points after averaging the near-points (final x-coordinates)
